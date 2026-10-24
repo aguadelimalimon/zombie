@@ -11,11 +11,15 @@ public class ZombieAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         
-        // Busca al jugador automáticamente por su Tag
+        // --- VELOCIDAD ALEATORIA ---
+        // Cada zombie tendrá una velocidad distinta entre 2.5 y 5.5
+        agent.speed = Random.Range(2.5f, 5.5f);
+
+        // Busca al jugador automáticamente por su Tag y guarda su Transform
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
-            player = playerObj.transform;
+            player = playerObj.transform; // <-- Corregido aquí para evitar el error de tipos
         }
     }
 
@@ -33,6 +37,12 @@ public class ZombieAI : MonoBehaviour
         health -= amount;
         if (health <= 0)
         {
+            // Avisamos al GameManager si ya lo creaste para sumar puntos y racha
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.ZombieKilled();
+            }
+            
             Destroy(gameObject);
         }
     }

@@ -8,21 +8,29 @@ public class ZombieSpawner : MonoBehaviour
 
     void Update()
     {
-        spawnTimer += Time.deltaTime;
-
-        if (spawnTimer >= spawnInterval)
+        // Solo genera zombies si el GameManager existe y aún quedan por salir en esta oleada
+        if (GameManager.Instance != null && GameManager.Instance.zombiesToSpawnThisWave > 0)
         {
-            SpawnZombie();
-            spawnTimer = 0f; // Reinicia el cronómetro
+            spawnTimer += Time.deltaTime;
+
+            if (spawnTimer >= spawnInterval)
+            {
+                SpawnZombie();
+                spawnTimer = 0f;
+            }
         }
     }
 
     void SpawnZombie()
     {
-        if (zombiePrefab != null)
+        if (zombiePrefab != null && GameManager.Instance != null)
         {
-            // Instancia el zombie en la posición exacta de este objeto Spawner
+            // Instancia el zombie en la posición del spawner
             Instantiate(zombiePrefab, transform.position, transform.rotation);
+
+            // Registra el nuevo zombie en el GameManager
+            GameManager.Instance.zombiesToSpawnThisWave--;
+            GameManager.Instance.zombiesAlive++;
         }
     }
 }
