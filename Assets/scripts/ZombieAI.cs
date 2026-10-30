@@ -1,4 +1,3 @@
-
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -25,28 +24,22 @@ public class ZombieAI : MonoBehaviour
     private NavMeshAgent agent;
     private Transform player;
     private bool isDead = false;
-
     private Animator animator;
-
     private float updatePathTimer = 0f;
-
     private int currentWave = 1;
+
+    // VARIABLE NUEVA PARA EVITAR EL BUG DE MULTIPLE DAÑO
+    private float lastDamageTime = 0f; 
 
     void Start()
     {
         currentHealth = maxHealth;
-
         agent = GetComponent<NavMeshAgent>();
-
         animator = GetComponentInChildren<Animator>();
 
-        // Velocidad inicial
         UpdateZombieSpeed();
 
-        // Buscar al jugador
-        GameObject playerObj =
-            GameObject.FindGameObjectWithTag("Player");
-
+        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;
@@ -58,10 +51,8 @@ public class ZombieAI : MonoBehaviour
         if (isDead) return;
         if (player == null) return;
 
-        float distanceToPlayer =
-            Vector3.Distance(transform.position, player.position);
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
 
-        // Ataque
         if (distanceToPlayer <= attackRange)
         {
             agent.SetDestination(transform.position);
@@ -74,70 +65,39 @@ public class ZombieAI : MonoBehaviour
         }
         else
         {
-            // Persecución
             updatePathTimer += Time.deltaTime;
-
             if (updatePathTimer >= 0.2f)
             {
                 if (agent != null && agent.enabled)
                 {
                     agent.SetDestination(player.position);
                 }
-
                 updatePathTimer = 0f;
             }
         }
     }
 
-    // ACTUALIZAR VELOCIDAD SEGÚN LA OLEADA
     public void SetWave(int wave)
     {
         currentWave = Mathf.Max(1, wave);
-
         UpdateZombieSpeed();
     }
 
     void UpdateZombieSpeed()
     {
-        // Aumentar velocidad de movimiento
-        float newSpeed =
-            baseSpeed + (currentWave - 1) * speedIncreasePerWave;
+        float newSpeed = baseSpeed + (currentWave - 1) * speedIncreasePerWave;
+        if (agent != null) agent.speed = newSpeed;
 
-        if (agent != null)
-        {
-            agent.speed = newSpeed;
-        }
-
-        // Aumentar velocidad de animación
-        float velocidadAnimacion =
-            baseAnimationSpeed +
-            (currentWave - 1) * animationIncreasePerWave;
-
-        if (animator != null)
-        {
-            animator.speed = velocidadAnimacion;
-        }
-
-        Debug.Log(
-            "Zombie - Oleada: " + currentWave +
-            " | Velocidad: " + newSpeed +
-            " | Animación: " + velocidadAnimacion
-        );
+        float velocidadAnimacion = baseAnimationSpeed + (currentWave - 1) * animationIncreasePerWave;
+        if (animator != null) animator.speed = velocidadAnimacion;
     }
 
     void AttackPlayer()
     {
-        PlayerHealth playerHealth =
-            player.GetComponent<PlayerHealth>();
-
+        PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(damageToPlayer);
-
-            Debug.Log(
-                "¡El zombie te ha golpeado! Daño: " +
-                damageToPlayer
-            );
         }
     }
 
@@ -145,12 +105,16 @@ public class ZombieAI : MonoBehaviour
     {
         if (isDead) return;
 
-        currentHealth -= damage;
+        // --- PARCHE ANTIBUGS: I-FRAMES ---
+        // Si el zombie recibió daño hace menos de 0.1 segundos, ignora los choques extra de la misma bala.
+        if (Time.time < lastDamageTime + 0.1f) return;
+        
+        // Si es un daño válido, actualizamos el cronómetro
+        lastDamageTime = Time.time;
+        // ---------------------------------
 
-        Debug.Log(
-            "Zombie atacado. Vida restante: " +
-            currentHealth
-        );
+        currentHealth -= damage;
+        Debug.Log("Zombie atacado. Vida restante: " + currentHealth);
 
         if (currentHealth <= 0)
         {

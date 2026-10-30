@@ -7,6 +7,18 @@ public class MainMenu : MonoBehaviour
     // Escribe aquí los nombres exactos de las escenas de tus mapas
     public string[] mapSceneNames = { "SampleScene", "Map_Warehouse", "Map_Lab" };
 
+    // --- ¡AQUÍ ESTÁ LA MAGIA PARA EL CURSOR! ---
+    void Start()
+    {
+        // Aseguramos que el tiempo corra normal
+        Time.timeScale = 1f;
+
+        // Desbloqueamos y mostramos el cursor obligatoriamente al entrar al menú
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+    // --------------------------------------------
+
     // 1. Botón Jugar (Elige un mapa al azar de la lista)
     public void PlayRandomMap()
     {
@@ -15,8 +27,6 @@ public class MainMenu : MonoBehaviour
             Debug.LogWarning("⚠️ No hay mapas configurados en la lista.");
             return;
         }
-
-        Time.timeScale = 1f; // Asegura que el tiempo corra normal
 
         // Elige un índice aleatorio basado en cuántos mapas tengas en la lista
         int randomIndex = Random.Range(0, mapSceneNames.Length);
@@ -29,7 +39,6 @@ public class MainMenu : MonoBehaviour
     // 2. Selector de Mapas (Carga el mapa específico que elijas)
     public void LoadMap(string mapName)
     {
-        Time.timeScale = 1f;
         SceneManager.LoadScene(mapName);
     }
 

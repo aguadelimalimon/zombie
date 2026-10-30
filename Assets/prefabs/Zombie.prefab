@@ -111,10 +111,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f516aa361a79df24c9c6b11704cf9145, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 50
+  maxHealth: 100
   damageToPlayer: 10
   attackRange: 2
   attackCooldown: 1
+  baseSpeed: 3.5
+  speedIncreasePerWave: 0.3
+  baseAnimationSpeed: 1.5
+  animationIncreasePerWave: 0.1
 --- !u!195 &8578004763397940804
 NavMeshAgent:
   m_ObjectHideFlags: 0
