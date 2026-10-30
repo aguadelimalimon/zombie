@@ -7,6 +7,10 @@ public class PlayerWeapon : MonoBehaviour
     public GameObject bulletPrefab;
     public Transform firePoint; 
 
+    [Header("Modelos Visuales en Pantalla")]
+    // Arrastra aquí los GameObjects 3D de tus armas (hijos de la cámara)
+    public GameObject[] weaponModels; 
+
     [Header("Sistema de Armas (Depurador)")]
     public int currentWeaponIndex = 0;
     
@@ -23,12 +27,16 @@ public class PlayerWeapon : MonoBehaviour
     private bool isReloading = false;
     private float nextFireTime = 0f;
 
+    void Start()
+    {
+        // Al iniciar el juego, activamos solo el arma inicial y ocultamos las demás
+        UpdateWeaponVisuals();
+    }
+
     void Update()
     {
-        // BLOQUEO ABSOLUTO: Si está recargando, nada de este código se ejecuta
         if (isReloading) return;
 
-        // Recargar con la tecla 'R'
         if (Input.GetKeyDown(KeyCode.R))
         {
             TryReload();
@@ -50,6 +58,8 @@ public class PlayerWeapon : MonoBehaviour
 
         if (shouldShoot)
         {
+            if (isReloading) return; 
+
             if (currentAmmoInMag[currentWeaponIndex] > 0)
             {
                 nextFireTime = Time.time + fireRates[currentWeaponIndex];
@@ -67,20 +77,30 @@ public class PlayerWeapon : MonoBehaviour
     {
         if (isReloading) return;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1))
+        int previousWeapon = currentWeaponIndex;
+
+        if (Input.GetKeyDown(KeyCode.Alpha1)) currentWeaponIndex = 0;
+        else if (Input.GetKeyDown(KeyCode.Alpha2)) currentWeaponIndex = 1;
+        else if (Input.GetKeyDown(KeyCode.Alpha3)) currentWeaponIndex = 2;
+
+        // Si cambiamos de arma, actualizamos los modelos visuales en pantalla
+        if (previousWeapon != currentWeaponIndex)
         {
-            currentWeaponIndex = 0;
-            Debug.Log("🔄 Arma: " + weaponNames[currentWeaponIndex] + " | Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + reserveAmmo[currentWeaponIndex]);
+            UpdateWeaponVisuals();
+            Debug.Log("🔄 Arma equipada: " + weaponNames[currentWeaponIndex] + " | Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + reserveAmmo[currentWeaponIndex]);
         }
-        else if (Input.GetKeyDown(KeyCode.Alpha2))
+    }
+
+    // Método para apagar las armas que no usas y prender la activa
+    void UpdateWeaponVisuals()
+    {
+        for (int i = 0; i < weaponModels.Length; i++)
         {
-            currentWeaponIndex = 1;
-            Debug.Log("🔄 Arma: " + weaponNames[currentWeaponIndex] + " | Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + reserveAmmo[currentWeaponIndex]);
-        }
-        else if (Input.GetKeyDown(KeyCode.Alpha3))
-        {
-            currentWeaponIndex = 2;
-            Debug.Log("🔄 Arma: " + weaponNames[currentWeaponIndex] + " | Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + reserveAmmo[currentWeaponIndex]);
+            if (weaponModels[i] != null)
+            {
+                // Si es el índice actual, se muestra; si no, se oculta
+                weaponModels[i].SetActive(i == currentWeaponIndex);
+            }
         }
     }
 
@@ -118,7 +138,6 @@ public class PlayerWeapon : MonoBehaviour
             reserveAmmo[currentWeaponIndex] = 0;
         }
 
-        // Pequeño respiro para evitar disparos accidentales al terminar
         nextFireTime = Time.time + 0.3f;
         isReloading = false;
 
@@ -128,6 +147,7 @@ public class PlayerWeapon : MonoBehaviour
     void Shoot()
     {
         if (isReloading) return;
+        if (currentAmmoInMag[currentWeaponIndex] <= 0) return;
 
         if (bulletPrefab != null && firePoint != null)
         {

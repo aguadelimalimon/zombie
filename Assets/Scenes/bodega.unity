@@ -6611,6 +6611,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bulletPrefab: {fileID: 1939624616791753900, guid: 8bc33980ef4049f4bbb96b1a4ca548ee, type: 3}
   firePoint: {fileID: 88550261}
+  weaponModels:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
   currentWeaponIndex: 0
   maxAmmoInMag: 0c000000080000001e000000
   currentAmmoInMag: 0c000000080000001e000000
