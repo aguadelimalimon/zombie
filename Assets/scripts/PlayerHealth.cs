@@ -8,7 +8,7 @@ public class PlayerHealth : MonoBehaviour
 
     [Header("Interfaz y Menús")]
     public TextMeshProUGUI healthText;
-    public GameObject gameOverPanel; // Arrastra aquí tu GameOverPanel desde la jerarquía
+    public GameObject gameOverPanel; // Arrastra aquí tu GameOverPanel de la jerarquía
 
     private bool isDead = false;
 
@@ -19,7 +19,7 @@ public class PlayerHealth : MonoBehaviour
 
         if (gameOverPanel != null)
         {
-            gameOverPanel.SetActive(false); // Asegura que empiece oculto
+            gameOverPanel.SetActive(false);
         }
     }
 
@@ -48,14 +48,13 @@ public class PlayerHealth : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
-        Debug.Log("¡GAME OVER ACTIVADO!");
+        Debug.Log("💀 ¡El jugador ha muerto!");
 
         if (gameOverPanel != null)
         {
-            // 1. Mostramos el panel de Game Over
             gameOverPanel.SetActive(true);
 
-            // 2. Extraemos el puntaje y la oleada del GameManager
+            // Obtenemos los datos del GameManager asegurándonos de que exista
             int finalScore = 0;
             int finalWave = 1;
 
@@ -63,17 +62,29 @@ public class PlayerHealth : MonoBehaviour
             {
                 finalScore = GameManager.instance.score;
                 finalWave = GameManager.instance.currentWave;
+                Debug.Log("📊 Datos extraídos del GameManager -> Puntos: " + finalScore + " | Oleada: " + finalWave);
+            }
+            else
+            {
+                Debug.LogError("❌ ¡ERROR CRÍTICO: GameManager.instance es NULL! No hay GameManager en esta escena.");
             }
 
-            // 3. Pasamos los datos al script GameOverUI para que los pinte en pantalla
+            // Buscamos el script GameOverUI en el panel
             GameOverUI gameOverScript = gameOverPanel.GetComponent<GameOverUI>();
             if (gameOverScript != null)
             {
                 gameOverScript.SetupGameOver(finalScore, finalWave);
             }
+            else
+            {
+                Debug.LogError("❌ ¡El GameOverPanel NO tiene adjunto el script GameOverUI!");
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ ¡El GameOverPanel está vacío en el Inspector del Player!");
         }
 
-        // 4. Congelamos el juego por completo y liberamos el cursor para los botones
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;

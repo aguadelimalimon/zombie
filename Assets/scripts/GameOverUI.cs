@@ -1,6 +1,6 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class GameOverUI : MonoBehaviour
 {
@@ -9,22 +9,39 @@ public class GameOverUI : MonoBehaviour
     public TextMeshProUGUI finalWaveText;
     public TextMeshProUGUI highScoreText;
 
-    // Esta función se llama automáticamente cuando el jugador muere
     public void SetupGameOver(int finalScore, int finalWave)
     {
-        // 1. Mostrar puntaje y oleada actual
-        if (finalScoreText != null) finalScoreText.text = "Puntaje: " + finalScore;
-        if (finalWaveText != null) finalWaveText.text = "Oleadas: " + finalWave;
+        Debug.Log("🎯 SetupGameOver llamado con Puntaje: " + finalScore + " y Oleada: " + finalWave);
 
-        // 2. Sistema de Récord (High Score)
+        // Asignamos el puntaje
+        if (finalScoreText != null)
+        {
+            finalScoreText.text = "Puntaje: " + finalScore;
+        }
+        else
+        {
+            Debug.LogError("❌ Falta arrastrar el texto 'FinalScoreText' en el Inspector del GameOverUI.");
+        }
+
+        // Asignamos la oleada
+        if (finalWaveText != null)
+        {
+            finalWaveText.text = "Oleadas: " + finalWave;
+        }
+        else
+        {
+            Debug.LogError("❌ Falta arrastrar el texto 'FinalWaveText' en el Inspector del GameOverUI.");
+        }
+
+        // Sistema de Récord Histórico
         int highScore = PlayerPrefs.GetInt("HighScore", 0);
 
         if (finalScore > highScore)
         {
             highScore = finalScore;
-            PlayerPrefs.SetInt("HighScore", highScore); // Guarda el nuevo récord
+            PlayerPrefs.SetInt("HighScore", highScore);
             PlayerPrefs.Save();
-            Debug.Log("🏆 ¡NUEVO RÉCORD DE PUNTAJE!");
+            Debug.Log("🏆 ¡NUEVO RÉCORD GUARDADO: " + highScore + "!");
         }
 
         if (highScoreText != null)
@@ -33,7 +50,6 @@ public class GameOverUI : MonoBehaviour
         }
     }
 
-    // Botones del Game Over
     public void RestartGame()
     {
         Time.timeScale = 1f;

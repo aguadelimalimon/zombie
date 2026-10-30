@@ -1,6 +1,5 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
@@ -18,7 +17,7 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
-        // Patrón Singleton global
+        // Patrón Singleton global para que otros scripts lo consulten fácilmente
         if (instance == null)
         {
             instance = this;
@@ -36,7 +35,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // Si ya se acabaron de generar los zombies de la oleada y murieron todos los vivos, avanzamos de ronda
+        // Si ya se acabaron de generar los zombies de la oleada y murieron todos los vivos, pasamos a la siguiente ronda
         if (zombiesToSpawnThisWave <= 0 && zombiesAlive <= 0)
         {
             NextWave();
@@ -47,21 +46,21 @@ public class GameManager : MonoBehaviour
     {
         currentWave++;
         
-        // Escalado de dificultad: cada oleada trae más zombies
+        // Escalado de dificultad: cada oleada trae más zombies de forma automática
         zombiesToSpawnThisWave = currentWave * 10 + 5; 
         
         Debug.Log("=== ¡OLEADA " + currentWave + " INICIADA! ===");
         UpdateUI();
     }
 
-    // Método para sumar puntos desde cualquier parte del juego
+    // Método para sumar puntos cuando matas a un zombie
     public void AddScore(int amount)
     {
         score += amount;
         UpdateUI();
     }
 
-    // Llámalo desde tu Spawner cada vez que aparezca un zombie nuevo
+    // Llámalo desde tu Spawner cada vez que nazca un zombie nuevo
     public void ZombieSpawned()
     {
         zombiesAlive++;
@@ -74,7 +73,7 @@ public class GameManager : MonoBehaviour
         zombiesAlive--;
         if (zombiesAlive < 0) zombiesAlive = 0;
         
-        // Otorgamos puntos automáticos por cada zombie abatido (ej. 100 puntos)
+        // Otorgamos 100 puntos automáticos por cada zombie abatido
         AddScore(100);
     }
 
