@@ -4,7 +4,7 @@ public class Bullet : MonoBehaviour
 {
     public float speed = 30f;    // Velocidad a la que vuela la bala
     public int damage = 25;      // Daño al zombie
-    public float lifetime = 3f;  // Segundos antes de destruirse si no choca con nada
+    public float lifetime = 2f;  // Segundos antes de destruirse si no choca con nada
     private Rigidbody rb;
 
     void Start()

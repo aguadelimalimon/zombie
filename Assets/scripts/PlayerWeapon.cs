@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using System.Collections;
 
@@ -5,156 +6,232 @@ public class PlayerWeapon : MonoBehaviour
 {
     [Header("Referencias de Disparo")]
     public GameObject bulletPrefab;
-    public Transform firePoint; 
+    public Transform firePoint;
+    public float bulletSpeed = 30f;
 
     [Header("Modelos Visuales en Pantalla")]
-    // Arrastra aquí los GameObjects 3D de tus armas (hijos de la cámara)
-    public GameObject[] weaponModels; 
+    public GameObject[] weaponModels;
 
-    [Header("Sistema de Armas (Depurador)")]
+    [Header("Sistema de Armas")]
     public int currentWeaponIndex = 0;
-    
-    private string[] weaponNames = { "Pistola Táctica", "Escopeta de Combate", "Rifle de Asalto" };
-    private float[] fireRates = { 0.3f, 0.9f, 0.12f };     
-    private bool[] isAutomatic = { false, false, true };    
-    
+
+    private string[] weaponNames = {
+        "Pistola Táctica",
+        "Escopeta de Combate",
+        "Rifle de Asalto"
+    };
+
+    // Tiempo entre disparos de cada arma
+    private float[] fireRates = { 0.3f, 0.9f, 0.12f };
+
+    // Armas automáticas
+    private bool[] isAutomatic = { false, false, true };
+
+    // Control individual del tiempo de disparo
+    private float[] nextFireTimes = new float[3];
+
     [Header("Sistema de Munición y Recarga")]
-    public int[] maxAmmoInMag = { 12, 8, 30 };      
-    public int[] currentAmmoInMag = { 12, 8, 30 };  
-    public int[] reserveAmmo = { 60, 32, 120 };     
-    public float[] reloadTimes = { 1.5f, 2.2f, 2.0f }; 
-    
+    public int[] maxAmmoInMag = { 12, 8, 30 };
+    public int[] currentAmmoInMag = { 12, 8, 30 };
+    public int[] reserveAmmo = { 60, 32, 120 };
+
+    public float[] reloadTimes = { 1.5f, 2.2f, 2.0f };
+
     private bool isReloading = false;
-    private float nextFireTime = 0f;
 
     void Start()
     {
-        // Al iniciar el juego, activamos solo el arma inicial y ocultamos las demás
         UpdateWeaponVisuals();
     }
 
     void Update()
     {
-        if (isReloading) return;
+        // Bloquear acciones durante la recarga
+        if (isReloading)
+            return;
 
+        HandleWeaponSwitching();
+
+        // Recargar con R
         if (Input.GetKeyDown(KeyCode.R))
         {
             TryReload();
             return;
         }
 
-        HandleWeaponSwitching();
+        HandleShooting();
+    }
 
-        bool shouldShoot = false;
+    // CONTROL DE DISPARO
+    void HandleShooting()
+    {
+        int weapon = currentWeaponIndex;
 
-        if (isAutomatic[currentWeaponIndex])
+        bool shouldShoot;
+
+        if (isAutomatic[weapon])
         {
-            shouldShoot = Input.GetMouseButton(0) && Time.time >= nextFireTime;
+            // Rifle automático
+            shouldShoot = Input.GetMouseButton(0);
         }
         else
         {
-            shouldShoot = Input.GetMouseButtonDown(0) && Time.time >= nextFireTime;
+            // Pistola y escopeta semiautomáticas
+            shouldShoot = Input.GetMouseButtonDown(0);
         }
 
-        if (shouldShoot)
+        // Comprobar cooldown
+        if (!shouldShoot || Time.time < nextFireTimes[weapon])
+            return;
+
+        // Comprobar munición
+        if (currentAmmoInMag[weapon] <= 0)
         {
-            if (isReloading) return; 
-
-            if (currentAmmoInMag[currentWeaponIndex] > 0)
-            {
-                nextFireTime = Time.time + fireRates[currentWeaponIndex];
-                Shoot();
-            }
-            else
-            {
-                Debug.Log("⚠️ ¡CARGADOR VACÍO! Recargando...");
-                TryReload();
-            }
+            TryReload();
+            return;
         }
+
+        Shoot();
     }
 
+    // CAMBIAR DE ARMA
     void HandleWeaponSwitching()
     {
-        if (isReloading) return;
-
         int previousWeapon = currentWeaponIndex;
 
-        if (Input.GetKeyDown(KeyCode.Alpha1)) currentWeaponIndex = 0;
-        else if (Input.GetKeyDown(KeyCode.Alpha2)) currentWeaponIndex = 1;
-        else if (Input.GetKeyDown(KeyCode.Alpha3)) currentWeaponIndex = 2;
+        if (Input.GetKeyDown(KeyCode.Alpha1))
+            currentWeaponIndex = 0;
 
-        // Si cambiamos de arma, actualizamos los modelos visuales en pantalla
+        else if (Input.GetKeyDown(KeyCode.Alpha2))
+            currentWeaponIndex = 1;
+
+        else if (Input.GetKeyDown(KeyCode.Alpha3))
+            currentWeaponIndex = 2;
+
+        currentWeaponIndex = Mathf.Clamp(currentWeaponIndex, 0, 2);
+
         if (previousWeapon != currentWeaponIndex)
         {
             UpdateWeaponVisuals();
-            Debug.Log("🔄 Arma equipada: " + weaponNames[currentWeaponIndex] + " | Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + reserveAmmo[currentWeaponIndex]);
+
+            Debug.Log(
+                "Arma equipada: " + weaponNames[currentWeaponIndex] +
+                " | Balas: " + currentAmmoInMag[currentWeaponIndex] +
+                "/" + reserveAmmo[currentWeaponIndex]
+            );
         }
     }
 
-    // Método para apagar las armas que no usas y prender la activa
+    // ACTUALIZAR MODELOS VISUALES
     void UpdateWeaponVisuals()
     {
         for (int i = 0; i < weaponModels.Length; i++)
         {
             if (weaponModels[i] != null)
             {
-                // Si es el índice actual, se muestra; si no, se oculta
                 weaponModels[i].SetActive(i == currentWeaponIndex);
             }
         }
     }
 
+    // INTENTAR RECARGAR
     void TryReload()
     {
-        if (isReloading) return;
+        int weapon = currentWeaponIndex;
 
-        if (currentAmmoInMag[currentWeaponIndex] < maxAmmoInMag[currentWeaponIndex] && reserveAmmo[currentWeaponIndex] > 0)
+        if (isReloading)
+            return;
+
+        if (currentAmmoInMag[weapon] >= maxAmmoInMag[weapon])
+            return;
+
+        if (reserveAmmo[weapon] <= 0)
         {
-            StartCoroutine(ReloadRoutine());
+            Debug.Log("Sin munición de reserva.");
+            return;
         }
-        else if (reserveAmmo[currentWeaponIndex] <= 0)
-        {
-            Debug.Log("❌ ¡Sin munición de reserva!");
-        }
+
+        StartCoroutine(ReloadRoutine(weapon));
     }
 
-    IEnumerator ReloadRoutine()
+    // SISTEMA DE RECARGA
+    IEnumerator ReloadRoutine(int weapon)
     {
         isReloading = true;
-        Debug.Log("🔄 Recargando " + weaponNames[currentWeaponIndex] + "...");
 
-        yield return new WaitForSeconds(reloadTimes[currentWeaponIndex]);
+        Debug.Log("Recargando " + weaponNames[weapon] + "...");
 
-        int bulletsNeeded = maxAmmoInMag[currentWeaponIndex] - currentAmmoInMag[currentWeaponIndex];
+        yield return new WaitForSeconds(reloadTimes[weapon]);
 
-        if (reserveAmmo[currentWeaponIndex] >= bulletsNeeded)
+        int bulletsNeeded =
+            maxAmmoInMag[weapon] - currentAmmoInMag[weapon];
+
+        int bulletsToReload =
+            Mathf.Min(bulletsNeeded, reserveAmmo[weapon]);
+
+        currentAmmoInMag[weapon] += bulletsToReload;
+        reserveAmmo[weapon] -= bulletsToReload;
+
+        // Pequeña espera antes del siguiente disparo
+        nextFireTimes[weapon] = Time.time + 0.2f;
+
+        isReloading = false;
+
+        Debug.Log(
+            "Recarga completada: " +
+            currentAmmoInMag[weapon] + "/" +
+            reserveAmmo[weapon]
+        );
+    }
+
+    // DISPARAR
+    void Shoot()
+    {
+        int weapon = currentWeaponIndex;
+
+        if (isReloading || currentAmmoInMag[weapon] <= 0)
+            return;
+
+        if (bulletPrefab == null || firePoint == null)
         {
-            reserveAmmo[currentWeaponIndex] -= bulletsNeeded;
-            currentAmmoInMag[currentWeaponIndex] = maxAmmoInMag[currentWeaponIndex];
+            Debug.LogWarning(
+                "Falta asignar Bullet Prefab o Fire Point."
+            );
+            return;
+        }
+
+        // Crear proyectil
+        GameObject bullet = Instantiate(
+            bulletPrefab,
+            firePoint.position,
+            firePoint.rotation
+        );
+
+        // Aplicar velocidad al proyectil
+        Rigidbody rb = bullet.GetComponent<Rigidbody>();
+
+        if (rb != null)
+        {
+            rb.velocity = firePoint.forward * bulletSpeed;
         }
         else
         {
-            currentAmmoInMag[currentWeaponIndex] += reserveAmmo[currentWeaponIndex];
-            reserveAmmo[currentWeaponIndex] = 0;
+            Debug.LogWarning("La bala no tiene Rigidbody.");
         }
 
-        nextFireTime = Time.time + 0.3f;
-        isReloading = false;
+        // Destruir bala después de 3 segundos
+        Destroy(bullet, 3f);
 
-        Debug.Log("✅ Recarga lista. Balas: " + currentAmmoInMag[currentWeaponIndex]);
-    }
+        // Descontar munición
+        currentAmmoInMag[weapon]--;
 
-    void Shoot()
-    {
-        if (isReloading) return;
-        if (currentAmmoInMag[currentWeaponIndex] <= 0) return;
+        // Activar cooldown del arma
+        nextFireTimes[weapon] = Time.time + fireRates[weapon];
 
-        if (bulletPrefab != null && firePoint != null)
-        {
-            Instantiate(bulletPrefab, firePoint.position, firePoint.rotation);
-        }
-
-        currentAmmoInMag[currentWeaponIndex]--;
-        Debug.Log("💥 [DISPARO] " + weaponNames[currentWeaponIndex] + " - Balas: " + currentAmmoInMag[currentWeaponIndex] + "/" + maxAmmoInMag[currentWeaponIndex]);
+        Debug.Log(
+            "[DISPARO] " + weaponNames[weapon] +
+            " | Cargador: " + currentAmmoInMag[weapon] +
+            "/" + maxAmmoInMag[weapon]
+        );
     }
 }
