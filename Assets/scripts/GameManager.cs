@@ -1,24 +1,32 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    public static GameManager Instance;
+    public static GameManager instance;
 
-    [Header("Puntuación y Oleadas")]
+    [Header("Estadísticas de Partida")]
     public int score = 0;
     public int currentWave = 1;
-    public int zombiesToSpawnThisWave = 10; // Empezamos con más presión desde la ronda 1
-    public int zombiesAlive = 0;
+    public int zombiesToSpawnThisWave = 10; // Cantidad de zombies que saldrán en esta oleada
+    public int zombiesAlive = 0;           // Contador de zombies vivos actualmente en el mapa
 
-    [Header("UI Textos")]
+    [Header("Referencias de Interfaz (UI)")]
     public TextMeshProUGUI scoreText;
     public TextMeshProUGUI waveText;
 
     void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        // Patrón Singleton global
+        if (instance == null)
+        {
+            instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     void Start()
@@ -28,6 +36,7 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        // Si ya se acabaron de generar los zombies de la oleada y murieron todos los vivos, avanzamos de ronda
         if (zombiesToSpawnThisWave <= 0 && zombiesAlive <= 0)
         {
             NextWave();
@@ -38,17 +47,35 @@ public class GameManager : MonoBehaviour
     {
         currentWave++;
         
-        // ESCALADO BRUTAL DE HORDAS: La cantidad de zombies explota por cada oleada
-        zombiesToSpawnThisWave = currentWave * 12; 
+        // Escalado de dificultad: cada oleada trae más zombies
+        zombiesToSpawnThisWave = currentWave * 10 + 5; 
         
-        Debug.Log("=== ¡OLEADA " + currentWave + " (MODO INFERNAL) INICIADA! ===");
+        Debug.Log("=== ¡OLEADA " + currentWave + " INICIADA! ===");
         UpdateUI();
     }
 
-    public void AddScore(int points)
+    // Método para sumar puntos desde cualquier parte del juego
+    public void AddScore(int amount)
     {
-        score += points;
+        score += amount;
         UpdateUI();
+    }
+
+    // Llámalo desde tu Spawner cada vez que aparezca un zombie nuevo
+    public void ZombieSpawned()
+    {
+        zombiesAlive++;
+        zombiesToSpawnThisWave--;
+    }
+
+    // Llámalo desde el script de vida del zombie cuando este muera
+    public void ZombieKilled()
+    {
+        zombiesAlive--;
+        if (zombiesAlive < 0) zombiesAlive = 0;
+        
+        // Otorgamos puntos automáticos por cada zombie abatido (ej. 100 puntos)
+        AddScore(100);
     }
 
     void UpdateUI()

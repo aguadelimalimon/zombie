@@ -1,36 +1,47 @@
 using UnityEngine;
+using System.Collections;
 
 public class ZombieSpawner : MonoBehaviour
 {
-    public GameObject zombiePrefab; // Arrastra aquí tu prefab del zombie
-    public float spawnInterval = 3f; // Tiempo entre cada zombie (en segundos)
-    private float spawnTimer;
+    [Header("Configuración de Spawn")]
+    public GameObject zombiePrefab;      // Arrastra aquí el Prefab de tu Zombie
+    public Transform[] spawnPoints;      // Arrastra aquí los objetos vacíos hijos (puntos de aparición)
+    public float spawnInterval = 2.5f;   // Tiempo entre cada aparición
 
-    void Update()
+    void Start()
     {
-        // Solo genera zombies si el GameManager existe y aún quedan por salir en esta oleada
-        if (GameManager.Instance != null && GameManager.Instance.zombiesToSpawnThisWave > 0)
-        {
-            spawnTimer += Time.deltaTime;
+        StartCoroutine(SpawnRoutine());
+    }
 
-            if (spawnTimer >= spawnInterval)
+    IEnumerator SpawnRoutine()
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(spawnInterval);
+
+            // Si el GameManager existe y aún faltan zombies por generar en esta oleada
+            if (GameManager.instance != null && GameManager.instance.zombiesToSpawnThisWave > 0)
             {
                 SpawnZombie();
-                spawnTimer = 0f;
             }
         }
     }
 
     void SpawnZombie()
     {
-        if (zombiePrefab != null && GameManager.Instance != null)
-        {
-            // Instancia el zombie en la posición del spawner
-            Instantiate(zombiePrefab, transform.position, transform.rotation);
+        if (zombiePrefab == null || spawnPoints.Length == 0) return;
 
-            // Registra el nuevo zombie en el GameManager
-            GameManager.Instance.zombiesToSpawnThisWave--;
-            GameManager.Instance.zombiesAlive++;
+        // Elige un punto de spawn al azar de la lista
+        int randomIndex = Random.Range(0, spawnPoints.Length);
+        Transform selectedPoint = spawnPoints[randomIndex];
+
+        // Instancia el zombie en el punto elegido
+        Instantiate(zombiePrefab, selectedPoint.position, selectedPoint.rotation);
+
+        // ¡AQUÍ VA LA FUNCIÓN CLAVE!: Le avisamos al GameManager que nació un zombie
+        if (GameManager.instance != null)
+        {
+            GameManager.instance.ZombieSpawned();
         }
     }
 }

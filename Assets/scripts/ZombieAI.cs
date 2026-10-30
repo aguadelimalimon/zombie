@@ -3,61 +3,67 @@ using UnityEngine.AI;
 
 public class ZombieAI : MonoBehaviour
 {
-    private Transform player;
-    private NavMeshAgent agent;
-
-    [Header("Salud y Dificultad Extrema")]
-    public int baseHealth = 60; 
+    [Header("Estadísticas del Zombie")]
+    public int maxHealth = 50;
     private int currentHealth;
-    public float baseSpeed = 3.5f;
+    public int damageToPlayer = 10;
 
-    [Header("Ataque al Player")]
-    public float attackRange = 2.0f;
-    public int baseAttackDamage = 15; 
-    public float attackCooldown = 1.0f;
-    private float lastAttackTime;
+    [Header("Configuración de Ataque")]
+    public float attackRange = 2.0f;     // Distancia a la que el zombie ataca
+    public float attackCooldown = 1.5f;  // Tiempo de espera entre cada golpe
+    private float lastAttackTime = 0f;
+
+    private NavMeshAgent agent;
+    private Transform player;
+    private bool isDead = false;
+
+    // Temporizador para optimizar el NavMesh
+    private float updatePathTimer = 0f;
 
     void Start()
     {
+        currentHealth = maxHealth;
         agent = GetComponent<NavMeshAgent>();
-        
+
+        // Busca automáticamente al jugador por su Tag ("Player")
         GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
         if (playerObj != null)
         {
             player = playerObj.transform;
         }
-
-        // ESCALADO IMPLACABLE PARA LA FERIA
-        if (GameManager.Instance != null)
-        {
-            int wave = GameManager.Instance.currentWave;
-            
-            // La vida sube drásticamente (en la oleada 40 serán bestias imposibles de matar rápido)
-            currentHealth = baseHealth + (wave * 50);
-            
-            // Los zombies se vuelven cada vez más veloces conforme sube la oleada (con un tope para que no se rompan)
-            agent.speed = Mathf.Min(baseSpeed + (wave * 0.12f), 7.5f);
-        }
-        else
-        {
-            currentHealth = baseHealth;
-        }
     }
 
     void Update()
     {
-        if (player != null && agent != null)
-        {
-            agent.SetDestination(player.position);
+        if (isDead) return;
+        if (player == null) return;
 
-            float distance = Vector3.Distance(transform.position, player.position);
-            if (distance <= attackRange)
+        // Calculamos la distancia entre el zombie y el jugador
+        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+
+        // Si está en rango de ataque, se detiene y golpea al jugador
+        if (distanceToPlayer <= attackRange)
+        {
+            agent.SetDestination(transform.position); // Detiene el movimiento para golpear
+
+            // Si ya pasó el tiempo de espera, ataca
+            if (Time.time >= lastAttackTime + attackCooldown)
             {
-                if (Time.time >= lastAttackTime + attackCooldown)
+                AttackPlayer();
+                lastAttackTime = Time.time;
+            }
+        }
+        else
+        {
+            // Si está lejos, lo persigue (optimizando el cálculo de ruta cada 0.2 segundos)
+            updatePathTimer += Time.deltaTime;
+            if (updatePathTimer >= 0.2f)
+            {
+                if (agent != null && agent.enabled)
                 {
-                    AttackPlayer();
-                    lastAttackTime = Time.time;
+                    agent.SetDestination(player.position);
                 }
+                updatePathTimer = 0f;
             }
         }
     }
@@ -67,16 +73,19 @@ public class ZombieAI : MonoBehaviour
         PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
         if (playerHealth != null)
         {
-            // El daño de los zombies aumenta en cada oleada; en rondas altas te matarán de 2 o 3 golpes
-            int scaledDamage = baseAttackDamage + (GameManager.Instance != null ? GameManager.Instance.currentWave * 2 : 0);
-            playerHealth.TakeDamage(scaledDamage);
+            playerHealth.TakeDamage(damageToPlayer);
+            Debug.Log("💥 ¡El zombie te ha golpeado! Daño: " + damageToPlayer);
         }
     }
 
-    public void TakeDamage(int amount)
+    // Método para recibir daño (cuando le disparas)
+    public void TakeDamage(int damage)
     {
-        currentHealth -= amount;
-        
+        if (isDead) return;
+
+        currentHealth -= damage;
+        Debug.Log("Zombie atacado. Vida restante: " + currentHealth);
+
         if (currentHealth <= 0)
         {
             Die();
@@ -85,12 +94,14 @@ public class ZombieAI : MonoBehaviour
 
     void Die()
     {
-        if (GameManager.Instance != null)
+        isDead = true;
+
+        // Le avisamos al GameManager que este zombie murió
+        if (GameManager.instance != null)
         {
-            GameManager.Instance.zombiesAlive--;
-            // Damos 150 puntos por baja para que llegar a 50,000 requiera sobrevivir muchas rondas
-            GameManager.Instance.AddScore(150); 
+            GameManager.instance.ZombieKilled();
         }
+
         Destroy(gameObject);
     }
 }
