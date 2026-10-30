@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -9,24 +10,43 @@ public class ZombieAI : MonoBehaviour
     public int damageToPlayer = 10;
 
     [Header("Configuración de Ataque")]
-    public float attackRange = 2.0f;     // Distancia a la que el zombie ataca
-    public float attackCooldown = 1.5f;  // Tiempo de espera entre cada golpe
+    public float attackRange = 2.0f;
+    public float attackCooldown = 1.5f;
     private float lastAttackTime = 0f;
+
+    [Header("Velocidad por Oleadas")]
+    public float baseSpeed = 3.5f;
+    public float speedIncreasePerWave = 0.3f;
+
+    [Header("Animación")]
+    public float baseAnimationSpeed = 1.5f;
+    public float animationIncreasePerWave = 0.1f;
 
     private NavMeshAgent agent;
     private Transform player;
     private bool isDead = false;
 
-    // Temporizador para optimizar el NavMesh
+    private Animator animator;
+
     private float updatePathTimer = 0f;
+
+    private int currentWave = 1;
 
     void Start()
     {
         currentHealth = maxHealth;
+
         agent = GetComponent<NavMeshAgent>();
 
-        // Busca automáticamente al jugador por su Tag ("Player")
-        GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
+        animator = GetComponentInChildren<Animator>();
+
+        // Velocidad inicial
+        UpdateZombieSpeed();
+
+        // Buscar al jugador
+        GameObject playerObj =
+            GameObject.FindGameObjectWithTag("Player");
+
         if (playerObj != null)
         {
             player = playerObj.transform;
@@ -38,15 +58,14 @@ public class ZombieAI : MonoBehaviour
         if (isDead) return;
         if (player == null) return;
 
-        // Calculamos la distancia entre el zombie y el jugador
-        float distanceToPlayer = Vector3.Distance(transform.position, player.position);
+        float distanceToPlayer =
+            Vector3.Distance(transform.position, player.position);
 
-        // Si está en rango de ataque, se detiene y golpea al jugador
+        // Ataque
         if (distanceToPlayer <= attackRange)
         {
-            agent.SetDestination(transform.position); // Detiene el movimiento para golpear
+            agent.SetDestination(transform.position);
 
-            // Si ya pasó el tiempo de espera, ataca
             if (Time.time >= lastAttackTime + attackCooldown)
             {
                 AttackPlayer();
@@ -55,36 +74,83 @@ public class ZombieAI : MonoBehaviour
         }
         else
         {
-            // Si está lejos, lo persigue (optimizando el cálculo de ruta cada 0.2 segundos)
+            // Persecución
             updatePathTimer += Time.deltaTime;
+
             if (updatePathTimer >= 0.2f)
             {
                 if (agent != null && agent.enabled)
                 {
                     agent.SetDestination(player.position);
                 }
+
                 updatePathTimer = 0f;
             }
         }
     }
 
+    // ACTUALIZAR VELOCIDAD SEGÚN LA OLEADA
+    public void SetWave(int wave)
+    {
+        currentWave = Mathf.Max(1, wave);
+
+        UpdateZombieSpeed();
+    }
+
+    void UpdateZombieSpeed()
+    {
+        // Aumentar velocidad de movimiento
+        float newSpeed =
+            baseSpeed + (currentWave - 1) * speedIncreasePerWave;
+
+        if (agent != null)
+        {
+            agent.speed = newSpeed;
+        }
+
+        // Aumentar velocidad de animación
+        float velocidadAnimacion =
+            baseAnimationSpeed +
+            (currentWave - 1) * animationIncreasePerWave;
+
+        if (animator != null)
+        {
+            animator.speed = velocidadAnimacion;
+        }
+
+        Debug.Log(
+            "Zombie - Oleada: " + currentWave +
+            " | Velocidad: " + newSpeed +
+            " | Animación: " + velocidadAnimacion
+        );
+    }
+
     void AttackPlayer()
     {
-        PlayerHealth playerHealth = player.GetComponent<PlayerHealth>();
+        PlayerHealth playerHealth =
+            player.GetComponent<PlayerHealth>();
+
         if (playerHealth != null)
         {
             playerHealth.TakeDamage(damageToPlayer);
-            Debug.Log("💥 ¡El zombie te ha golpeado! Daño: " + damageToPlayer);
+
+            Debug.Log(
+                "¡El zombie te ha golpeado! Daño: " +
+                damageToPlayer
+            );
         }
     }
 
-    // Método para recibir daño (cuando le disparas)
     public void TakeDamage(int damage)
     {
         if (isDead) return;
 
         currentHealth -= damage;
-        Debug.Log("Zombie atacado. Vida restante: " + currentHealth);
+
+        Debug.Log(
+            "Zombie atacado. Vida restante: " +
+            currentHealth
+        );
 
         if (currentHealth <= 0)
         {
@@ -96,7 +162,6 @@ public class ZombieAI : MonoBehaviour
     {
         isDead = true;
 
-        // Le avisamos al GameManager que este zombie murió
         if (GameManager.instance != null)
         {
             GameManager.instance.ZombieKilled();
